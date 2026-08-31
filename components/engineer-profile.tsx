@@ -5,7 +5,7 @@ import { SectionHeading } from '@/components/section-heading'
 
 const STATS = [
   { icon: Award, value: '9+ yrs', label: 'Production experience' },
-  { icon: Music4, value: '400+', label: 'Tracks mixed & mastered' },
+  { icon: Music4, value: '20+', label: 'Tracks in portfolio' },
   { icon: Headphones, value: 'Afro · Hip-Hop · Pop', label: 'Specialty genres' },
 ]
 

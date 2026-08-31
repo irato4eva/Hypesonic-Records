@@ -3,7 +3,6 @@ import { Hero } from '@/components/hero'
 import { DistributionStrip } from '@/components/distribution-strip'
 import { ServicesGrid } from '@/components/services-grid'
 import { ProcessStrip } from '@/components/process-strip'
-import { GearShowcase } from '@/components/gear-showcase'
 import { EngineerProfile } from '@/components/engineer-profile'
 import { Portfolio } from '@/components/portfolio'
 import { CuratedGrid } from '@/components/curated-grid'
@@ -22,7 +21,6 @@ export default function Page() {
         <DistributionStrip />
         <ServicesGrid />
         <ProcessStrip />
-        <GearShowcase />
         <EngineerProfile />
         <Portfolio />
         <CuratedGrid />

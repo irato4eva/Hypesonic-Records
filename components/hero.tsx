@@ -83,9 +83,8 @@ export function Hero() {
         {/* mini trust row */}
         <dl className="mx-auto mt-14 grid max-w-lg grid-cols-3 gap-4">
           {[
-            ['1,200+', 'Tracks Mastered'],
+            ['20+', 'Tracks in Portfolio'],
             ['9 yrs', 'In the Booth'],
-            ['48 hr', 'Avg Turnaround'],
           ].map(([value, label]) => (
             <div key={label} className="glass rounded-2xl px-3 py-4">
               <dt className="font-display text-2xl font-bold text-foreground sm:text-3xl">

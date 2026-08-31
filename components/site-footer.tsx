@@ -15,7 +15,6 @@ import {
 
 const NAV = [
   { label: 'Services', href: '#services' },
-  { label: 'Gear Showcase', href: '#gear' },
   { label: 'Audio Portfolio', href: '#portfolio' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Studio Booth', href: '#studio-booth' },
