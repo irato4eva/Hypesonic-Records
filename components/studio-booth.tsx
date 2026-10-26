@@ -28,7 +28,10 @@ type Comment = {
   time: string
 }
 
-const SERVICES = [['Essential Mix', 50], ['Signature Mix', 180], ['Flagship Mix + Master', 500]] as const
+const SERVICES = [
+  ['Essential Mix', 50], ['Signature Mix', 180], ['Flagship Mix + Master', 500],
+  ['Essential Mix (5 tracks)', 225], ['Signature Mix (5 tracks)', 780], ['Flagship Mix + Master (5 tracks)', 2200],
+] as const
 
 /* ---------------- Booking Calendar ---------------- */
 
@@ -40,6 +43,11 @@ function BookingCalendar() {
   const [service, setService] = useState<string>('Essential Mix')
   const [taken, setTaken] = useState<string[]>([])
   const [msg, setMsg] = useState('')
+  useEffect(() => {
+    const h = (e: Event) => setService((e as CustomEvent<string>).detail)
+    window.addEventListener('choose-service', h)
+    return () => window.removeEventListener('choose-service', h)
+  }, [])
   const dateStr = selected
     ? `${view.y}-${String(view.m + 1).padStart(2, '0')}-${String(selected).padStart(2, '0')}`
     : ''

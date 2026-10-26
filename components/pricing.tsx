@@ -6,7 +6,6 @@ import { Reveal } from '@/components/reveal'
 import { SectionHeading } from '@/components/section-heading'
 import { cn } from '@/lib/utils'
 import { formatUSD, formatNGN, usdToNgn } from '@/lib/currency'
-import { PaymentModal } from '@/components/payment-modal'
 
 type Tier = {
   name: string
@@ -81,8 +80,6 @@ export function Pricing() {
     const usd = mode === 'track' ? tier.perTrackUsd : tier.packageUsd
     return currency === 'usd' ? formatUSD(usd) : formatNGN(usdToNgn(usd))
   }
-
-  const [checkoutTier, setCheckoutTier] = useState<Tier | null>(null)
 
   return (
     <section id="pricing" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-24 sm:px-6">
@@ -175,7 +172,14 @@ export function Pricing() {
 
               <button
                 type="button"
-                onClick={() => setCheckoutTier(tier)}
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent('choose-service', {
+                      detail: mode === 'track' ? tier.name : `${tier.name} (${tier.packageQty})`,
+                    }),
+                  )
+                  document.getElementById('studio-booth')?.scrollIntoView({ behavior: 'smooth' })
+                }}
                 className={cn(
                   'mt-7 rounded-xl py-3 text-center text-sm font-semibold transition-all',
                   tier.featured
@@ -190,12 +194,6 @@ export function Pricing() {
         ))}
       </div>
 
-      <PaymentModal
-        open={checkoutTier !== null}
-        onClose={() => setCheckoutTier(null)}
-        tierName={checkoutTier?.name ?? ''}
-        amountLabel={checkoutTier ? priceFor(checkoutTier) : ''}
-      />
     </section>
   )
 }
