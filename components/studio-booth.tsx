@@ -1,6 +1,8 @@
 'use client'
 
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { supabase } from '@/lib/supabase'
+import { formatNGN, usdToNgn } from '@/lib/currency'
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,11 +28,7 @@ type Comment = {
   time: string
 }
 
-const INITIAL_COMMENTS: Comment[] = [
-  { id: 'c1', pos: 0.18, author: 'Zara B.', text: 'Vocal feels a touch buried here — can we lift 2dB?', time: '0:38' },
-  { id: 'c2', pos: 0.52, author: 'Engineer', text: 'Added parallel compression on the drop. Check low end.', time: '1:47' },
-  { id: 'c3', pos: 0.81, author: 'Zara B.', text: 'Love the widening on the outro.', time: '2:54' },
-]
+const SERVICES = [['Essential Mix', 50], ['Signature Mix', 180], ['Flagship Mix + Master', 500]] as const
 
 /* ---------------- Booking Calendar ---------------- */
 
@@ -39,6 +37,29 @@ function BookingCalendar() {
   const [view, setView] = useState({ y: today.getFullYear(), m: today.getMonth() })
   const [selected, setSelected] = useState<number | null>(null)
   const [slot, setSlot] = useState<string | null>(null)
+  const [service, setService] = useState<string>('Essential Mix')
+  const [taken, setTaken] = useState<string[]>([])
+  const [msg, setMsg] = useState('')
+  const dateStr = selected
+    ? `${view.y}-${String(view.m + 1).padStart(2, '0')}-${String(selected).padStart(2, '0')}`
+    : ''
+  useEffect(() => {
+    if (!dateStr) return
+    supabase.rpc('taken_slots', { d: dateStr }).then(({ data }) => setTaken((data as string[]) || []))
+  }, [dateStr])
+  const pay = async () => {
+    const { data } = await supabase.auth.getSession()
+    if (!data.session) return setMsg('Please log in first (login box above).')
+    setMsg('Starting secure payment…')
+    const r = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.session.access_token },
+      body: JSON.stringify({ service, date: dateStr, time: slot }),
+    })
+    const j = await r.json()
+    if (j.url) location.href = j.url
+    else setMsg(j.error || 'Something went wrong')
+  }
 
   const firstDay = new Date(view.y, view.m, 1).getDay()
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate()
@@ -139,7 +160,7 @@ function BookingCalendar() {
             <button
               key={t}
               type="button"
-              disabled={!selected}
+              disabled={!selected || taken.includes(t)}
               onClick={() => setSlot(t)}
               className={cn(
                 'rounded-lg border px-3 py-1.5 text-sm transition-colors',
@@ -154,16 +175,28 @@ function BookingCalendar() {
         </div>
       </div>
 
-      {/* TODO: persist booking to backend + send confirmation on submit */}
+      <select
+        value={service}
+        onChange={(e) => setService(e.target.value)}
+        className="mt-5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+      >
+        {SERVICES.map(([n, usd]) => (
+          <option key={n} value={n}>
+            {n} — ${usd} (~{formatNGN(usdToNgn(usd))}) · paid in full
+          </option>
+        ))}
+      </select>
       <button
         type="button"
+        onClick={pay}
         disabled={!selected || !slot}
         className="glow-hover mt-5 w-full rounded-xl bg-gradient-to-r from-primary to-secondary py-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
       >
         {selected && slot
-          ? `Request ${monthLabel.split(' ')[0]} ${selected} · ${slot}`
+          ? `Pay & book ${monthLabel.split(' ')[0]} ${selected} · ${slot}`
           : 'Select a date & time'}
       </button>
+      {msg ? <p className="mt-3 text-xs text-muted-foreground">{msg}</p> : null}
     </div>
   )
 }
@@ -172,23 +205,24 @@ function BookingCalendar() {
 
 type UploadItem = { id: string; name: string; size: string }
 
-function FileUpload() {
+function FileUpload({ bookingId }: { bookingId?: string }) {
   const [dragging, setDragging] = useState(false)
-  const [files, setFiles] = useState<UploadItem[]>([
-    { id: 'f0', name: 'reference_mix_v2.wav', size: '48.2 MB' },
-  ])
+  const [files, setFiles] = useState<UploadItem[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   const addFiles = (list: FileList | null) => {
-    if (!list) return
-    // TODO: upload to blob/object storage and associate with the project
-    const next: UploadItem[] = Array.from(list).map((f, i) => ({
-      id: `${Date.now()}-${i}`,
-      name: f.name,
-      size: `${(f.size / 1024 / 1024).toFixed(1)} MB`,
-    }))
-    setFiles((prev) => [...prev, ...next])
+    if (!list || !bookingId) return
+    Array.from(list).forEach(async (f) => {
+      const { error } = await supabase.storage.from('stems').upload(`${bookingId}/${f.name}`, f, { upsert: true })
+      if (!error)
+        setFiles((p) => [...p, { id: `${bookingId}-${f.name}`, name: f.name, size: `${(f.size / 1024 / 1024).toFixed(1)} MB` }])
+    })
   }
+  useEffect(() => {
+    if (!bookingId) return
+    supabase.storage.from('stems').list(bookingId).then(({ data }) =>
+      setFiles((data || []).map((f: any) => ({ id: f.id, name: f.name, size: `${((f.metadata?.size || 0) / 1024 / 1024).toFixed(1)} MB` }))))
+  }, [bookingId])
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -203,6 +237,7 @@ function FileUpload() {
         Upload stems & references
       </div>
 
+      {!bookingId ? <p className="mt-3 text-xs text-muted-foreground">Book and pay for a session to unlock uploads.</p> : null}
       <div
         role="button"
         tabIndex={0}
@@ -275,8 +310,8 @@ function FileUpload() {
 
 /* ---------------- Status Tracker ---------------- */
 
-function StatusTracker() {
-  const [current, setCurrent] = useState(2) // "Mix Review"
+function StatusTracker({ status }: { status?: string }) {
+  const current = Math.max(0, STEPS.indexOf(status || 'Received'))
 
   return (
     <div className="glass rounded-2xl p-5">
@@ -323,7 +358,7 @@ function StatusTracker() {
                 </p>
                 {active ? (
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Awaiting your feedback on the latest revision.
+                    Current stage.
                   </p>
                 ) : null}
               </div>
@@ -332,24 +367,7 @@ function StatusTracker() {
         })}
       </ol>
 
-      {/* demo controls — remove once wired to real project state */}
-      <div className="mt-2 flex gap-2 border-t border-border pt-4">
-        <button
-          type="button"
-          onClick={() => setCurrent((c) => Math.max(0, c - 1))}
-          className="flex-1 rounded-lg border border-border py-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          Prev stage
-        </button>
-        <button
-          type="button"
-          onClick={() => setCurrent((c) => Math.min(STEPS.length - 1, c + 1))}
-          className="flex-1 rounded-lg border border-border py-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          Advance stage
-        </button>
-      </div>
-    </div>
+          </div>
   )
 }
 
@@ -366,10 +384,30 @@ function makeStaticBars(count = 72) {
   return bars
 }
 
-function RevisionComments() {
+function RevisionComments({ bookingId }: { bookingId?: string }) {
   const bars = useMemo(() => makeStaticBars(), [])
-  const [comments] = useState<Comment[]>(INITIAL_COMMENTS)
-  const [activeId, setActiveId] = useState<string>(INITIAL_COMMENTS[0].id)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [activeId, setActiveId] = useState<string>('')
+  const [txt, setTxt] = useState('')
+  const load = async () => {
+    if (!bookingId) return
+    const { data } = await supabase.from('comments').select('*').eq('booking_id', bookingId).order('created_at')
+    const c = (data || []).map((r: any) => ({ id: r.id, pos: r.pos, author: r.author, text: r.body, time: r.time_label }))
+    setComments(c)
+    setActiveId((a) => a || c[0]?.id || '')
+  }
+  useEffect(() => { load() }, [bookingId])
+  const post = async () => {
+    if (!bookingId || !txt.trim()) return
+    const m = txt.match(/^(\d+):(\d{2})\s+(.*)$/)
+    const secs = m ? +m[1] * 60 + +m[2] : 0
+    await supabase.from('comments').insert({
+      booking_id: bookingId, author: 'Client', pos: Math.min(1, secs / 240),
+      time_label: m ? `${m[1]}:${m[2]}` : '0:00', body: m ? m[3] : txt,
+    })
+    setTxt('')
+    load()
+  }
   const active = comments.find((c) => c.id === activeId)
 
   return (
@@ -430,16 +468,20 @@ function RevisionComments() {
         </div>
       ) : null}
 
-      {/* TODO: post new comments to backend, anchored to playhead position */}
+      
       <div className="mt-4 flex gap-2">
         <input
           type="text"
-          placeholder="Add a comment at the playhead…"
+          placeholder="Add a note — start with a time like 1:23 to pin it"
+          value={txt}
+          onChange={(e) => setTxt(e.target.value)}
           className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
         />
         <button
           type="button"
-          className="rounded-lg bg-gradient-to-r from-primary to-secondary px-4 text-sm font-semibold text-primary-foreground"
+          onClick={post}
+          disabled={!bookingId}
+          className="rounded-lg bg-gradient-to-r from-primary to-secondary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40"
         >
           Post
         </button>
@@ -451,6 +493,36 @@ function RevisionComments() {
 /* ---------------- Section ---------------- */
 
 export function StudioBooth() {
+  const [email, setEmail] = useState('')
+  const [user, setUser] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+  const [booking, setBooking] = useState<any>(null)
+
+  const loadBooking = async () => {
+    const { data: u } = await supabase.auth.getUser()
+    if (!u.user) return
+    const { data } = await supabase.from('bookings').select('*').eq('user_id', u.user.id).eq('paid', true)
+      .order('created_at', { ascending: false }).limit(1)
+    setBooking(data?.[0] || null)
+  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user.email || null)
+      if (data.session) loadBooking()
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setUser(s?.user.email || null)
+      if (s) loadBooking()
+      else setBooking(null)
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [])
+  const login = async () => {
+    if (!email) return
+    await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/#studio-booth' } })
+    setSent(true)
+  }
+
   return (
     <section id="studio-booth" className="scroll-mt-24 py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -460,16 +532,33 @@ export function StudioBooth() {
           description="Book time, send stems, track progress, and leave time-stamped notes — all in one place."
         />
 
-        <div className="mt-14 grid gap-4 lg:grid-cols-3">
+        <div className="glass mt-10 rounded-2xl p-5 text-sm">
+          {user ? (
+            <div className="flex items-center justify-between gap-3">
+              <span>Signed in as {user}</span>
+              <button type="button" onClick={() => supabase.auth.signOut()} className="text-primary underline">Log out</button>
+            </div>
+          ) : sent ? (
+            <p>Check your email for your login link.</p>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email to log in or sign up"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-primary/50" />
+              <button type="button" onClick={login} className="rounded-lg bg-gradient-to-r from-primary to-secondary px-4 py-2 font-semibold text-primary-foreground">Email me a login link</button>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <div className="flex flex-col gap-4">
             <BookingCalendar />
           </div>
           <div className="flex flex-col gap-4">
-            <FileUpload />
-            <StatusTracker />
+            <FileUpload bookingId={booking?.id} />
+            <StatusTracker status={booking?.status} />
           </div>
           <div className="flex flex-col gap-4 lg:col-span-1">
-            <RevisionComments />
+            <RevisionComments bookingId={booking?.id} />
           </div>
         </div>
       </div>

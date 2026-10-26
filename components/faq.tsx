@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils'
 const FAQS = [
   {
     q: 'What is your typical turnaround time?',
-    a: 'Mixing runs 3–5 business days per track and mastering 1–2 days, from the moment we receive your final stems. Rush delivery is available on request for an added fee.',
+    a: 'Turnaround depends on your package: 5–7 days for Essential Mix, 3–5 days for Signature Mix, and 48–72 hours for Flagship Mix + Master, counted from the moment payment is confirmed and your final stems are uploaded.',
   },
   {
     q: 'What is your revision policy?',
-    a: 'Every mix and master includes up to three revision rounds within the agreed scope. Additional rounds or new creative directions are billed at our hourly rate, always quoted upfront.',
+    a: 'Revisions depend on your package: 1 round for Essential Mix, 3 rounds for Signature Mix, and unlimited revisions for Flagship Mix + Master. Extra rounds or new creative directions on Essential and Signature are quoted upfront.',
   },
   {
     q: 'Which file formats do you accept and deliver?',
@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: 'How do payments and refunds work?',
-    a: 'We take a 50% deposit to lock your slot, with the balance due before final files are released. Deposits cover reserved studio time and are non-refundable, but unused prepaid sessions can be rescheduled.',
+    a: 'Payment is taken in full upfront to lock your slot and start work. Once a project has begun, payments are non-refundable, but unused prepaid sessions can be rescheduled.',
   },
   {
     q: 'Do you offer remote sessions or in-person only?',

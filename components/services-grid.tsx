@@ -16,6 +16,8 @@ type Service = {
   title: string
   description: string
   price: string
+  cta: string
+  href: string
 }
 
 const SERVICES: Service[] = [
@@ -24,42 +26,54 @@ const SERVICES: Service[] = [
     title: 'Recording',
     description:
       'Tracking vocals and live instruments in a treated booth with pristine signal chains and zero-latency monitoring.',
-    price: '₦25,000 / session',
+    price: 'Custom quote',
+    cta: 'Request a quote',
+    href: 'mailto:irato4eva@gmail.com?subject=Quote%20request%20-%20Recording',
   },
   {
     icon: SlidersHorizontal,
     title: 'Mixing',
     description:
       'Analog-modeled mixing with detailed stem processing, automation, and depth that translates on every system.',
-    price: '₦40,000 / track',
+    price: 'From $50 / track',
+    cta: 'See pricing',
+    href: '#pricing',
   },
   {
     icon: Gauge,
     title: 'Mastering',
     description:
       'Streaming-optimized mastering tuned for Spotify, Apple Music, and YouTube loudness targets.',
-    price: '₦18,000 / track',
+    price: 'Included in Flagship',
+    cta: 'See pricing',
+    href: '#pricing',
   },
   {
     icon: Megaphone,
     title: 'Jingles & Sound Branding',
     description:
       'Memorable audio logos, radio jingles, and sonic identities crafted for brands and campaigns.',
-    price: 'from ₦60,000',
+    price: 'Custom quote',
+    cta: 'Request a quote',
+    href: 'mailto:irato4eva@gmail.com?subject=Quote%20request%20-%20Jingles',
   },
   {
     icon: AudioWaveform,
     title: 'Audio Content Enhancement',
     description:
       'Noise reduction, clarity, and loudness for podcasts, audiobooks, and voiceover content.',
-    price: 'from ₦15,000',
+    price: 'Custom quote',
+    cta: 'Request a quote',
+    href: 'mailto:irato4eva@gmail.com?subject=Quote%20request%20-%20Audio%20Enhancement',
   },
   {
     icon: Wand2,
     title: 'Vocal Tuning & Editing',
     description:
       'Transparent pitch correction, timing alignment, comping, and detailed vocal editing.',
-    price: '₦12,000 / track',
+    price: 'Included in Signature',
+    cta: 'See pricing',
+    href: '#pricing',
   },
 ]
 
@@ -93,10 +107,10 @@ export function ServicesGrid() {
                   {service.price}
                 </span>
                 <a
-                  href="#studio-booth"
+                  href={service.href}
                   className="text-sm font-medium text-primary transition-opacity hover:opacity-80"
                 >
-                  Get Started
+                  {service.cta}
                 </a>
               </div>
             </div>

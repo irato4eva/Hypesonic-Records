@@ -20,8 +20,8 @@ const STEPS: Step[] = [
   {
     icon: ReceiptText,
     step: '02',
-    title: 'Engineer Review & Quote',
-    description: 'We assess the material and return a clear scope and fixed quote.',
+    title: 'Review & Confirmation',
+    description: 'We review your material and confirm the scope and delivery date for your package.',
   },
   {
     icon: SlidersHorizontal,
